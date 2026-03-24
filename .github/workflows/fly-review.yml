@@ -5,7 +5,7 @@ on:
     types: [opened, reopened, synchronize, closed]
 
 env:
-  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_REVIEW }}
   FLY_REGION: ord
   FLY_ORG: personal
 
