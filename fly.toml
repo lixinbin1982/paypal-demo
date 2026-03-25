@@ -18,12 +18,12 @@ primary_region = 'ord'
   processes = ['app']
 
 [[http_service.checks]]
-  interval = 10000
+  interval = "10s"
   grace_period = "10s"
   method = "GET"
   path = "/"
   protocol = "http"
-  timeout = 2000
+  timeout = "2s"
 
 [[vm]]
   memory = '1gb'
