@@ -10,7 +10,7 @@ ENV NODE_ENV="production"
 FROM base AS deps
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm NODE_ENV=development npm ci
 
 
 # Build the application
