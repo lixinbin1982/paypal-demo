@@ -1,4 +1,4 @@
-app = 'v6-nextjs-sample-integration'
+app = 'nextjs-template-test'
 primary_region = 'ord'
 
 [build]
