@@ -45,6 +45,13 @@ const PaymentButtons = ({
   addLog: (log: Omit<ApiLog, "timestamp">) => void;
   shippingCost?: number;
 }) => {
+  const PAYMENT_OPTIONS = [
+    { id: "paypal", label: "PayPal", emoji: "💳", desc: "Fast & secure" },
+    { id: "venmo", label: "Venmo", emoji: "💸", desc: "Split with friends" },
+    { id: "paylater", label: "Pay Later", emoji: "📅", desc: "Buy now, pay over time" },
+    { id: "guest", label: "Guest Checkout", emoji: "👤", desc: "Pay as guest" },
+  ];
+  const [selectedPayment, setSelectedPayment] = useState("paypal");
   const [shippingAddress, setShippingAddress] = useState<Record<string, string> | null>(null);
   const { loadingStatus } = usePayPal();
   const { error: eligibilityError } = useEligibleMethods({
@@ -162,14 +169,6 @@ const PaymentButtons = ({
       </div>
     );
   }
-
-  const PAYMENT_OPTIONS = [
-    { id: "paypal", label: "PayPal", emoji: "💳", desc: "Fast & secure" },
-    { id: "venmo", label: "Venmo", emoji: "💸", desc: "Split with friends" },
-    { id: "paylater", label: "Pay Later", emoji: "📅", desc: "Buy now, pay over time" },
-    { id: "guest", label: "Guest Checkout", emoji: "👤", desc: "Pay as guest" },
-  ];
-  const [selectedPayment, setSelectedPayment] = useState("paypal");
 
   return (
     <div className="flex flex-col gap-4">
