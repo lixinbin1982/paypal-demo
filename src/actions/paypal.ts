@@ -50,10 +50,32 @@ function buildItemsArray(cart: CartItem[]) {
  */
 export const createOrder = async ({
   cart,
+  shippingCost,
+  tax,
 }: {
   cart: CartItem[];
+  shippingCost?: number;
+  tax?: number;
 }) => {
   const { items, itemSubtotal } = buildItemsArray(cart);
+
+  const itemSub = parseFloat(itemSubtotal);
+  const shipping = shippingCost ?? 0;
+  const taxValue = tax ?? 0;
+  const total = (itemSub + shipping + taxValue).toFixed(2);
+
+  const breakdown: Record<string, { currencyCode: string; value: string }> = {
+    itemTotal: {
+      currencyCode: "USD",
+      value: itemSubtotal,
+    },
+  };
+  if (shipping > 0) {
+    breakdown.shipping = { currencyCode: "USD", value: shipping.toFixed(2) };
+  }
+  if (taxValue > 0) {
+    breakdown.taxTotal = { currencyCode: "USD", value: taxValue.toFixed(2) };
+  }
 
   const orderRequestBody = {
     intent: CheckoutPaymentIntent.Capture,
@@ -61,13 +83,8 @@ export const createOrder = async ({
       {
         amount: {
           currencyCode: "USD",
-          value: itemSubtotal,
-          breakdown: {
-            itemTotal: {
-              currencyCode: "USD",
-              value: itemSubtotal,
-            },
-          },
+          value: total,
+          breakdown,
         },
         items,
       },

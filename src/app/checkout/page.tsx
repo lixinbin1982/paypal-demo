@@ -21,7 +21,7 @@ import {
   type OnCompleteData,
   type OnErrorData,
 } from "@paypal/react-paypal-js/sdk-v6";
-import { PRODUCT, getCart, clearCart, type CartItem } from "@/lib/product";
+import { PRODUCT, getCart, clearCart, getProduct, type CartItem } from "@/lib/product";
 import {
   getBrowserSafeClientId,
   createOrder,
@@ -30,7 +30,7 @@ import {
 
 import ApiHistoryPanel, { type ApiLog } from "@/components/ApiHistoryPanel";
 
-export type PaymentStatus = "idle" | "success" | "cancel" | "error";
+export type PaymentStatus = { type: "idle" } | { type: "success"; data?: any } | { type: "cancel" } | { type: "error" };
 
 export { type ApiLog };
 
@@ -56,9 +56,17 @@ const PaymentButtons = ({
 
   const isLoading = loadingStatus === INSTANCE_LOADING_STATE.PENDING;
 
+  const TAX_RATE = 0.05;
+
   const handleCreateOrder = async () => {
+    const itemSub = parseFloat(PRODUCT.price) * cart.quantity;
+    const shipping = shippingCost ?? 10;
+    const tax = parseFloat((itemSub * TAX_RATE).toFixed(2));
+
     const result = await createOrder({
       cart: [{ sku: cart.sku, quantity: cart.quantity }],
+      shippingCost: shipping,
+      tax,
     });
     setShippingAddress(null);
     addLog({
@@ -66,7 +74,7 @@ const PaymentButtons = ({
       method: "POST",
       url: "/api/paypal/orders",
       status: 201,
-      request: { sku: cart.sku, quantity: cart.quantity },
+      request: { sku: cart.sku, quantity: cart.quantity, shippingCost: shipping, tax },
       response: result as unknown as Record<string, unknown>,
     });
     return result;
@@ -106,12 +114,15 @@ const PaymentButtons = ({
       });
       console.log("Payment capture result:", captureResult);
       clearCart();
-      onStatusChange("success");
+      const shCost = shippingCost ?? 10;
+      const itemSub = parseFloat(PRODUCT.price) * cart.quantity;
+      const taxVal = parseFloat((itemSub * 0.05).toFixed(2));
+      onStatusChange({ type: "success", data: { ...captureResult, _subtotal: itemSub, _shipping: shCost, _tax: taxVal } });
     },
 
     onCancel: (data: OnCancelDataOneTimePayments) => {
       console.log("Payment cancelled:", data);
-      onStatusChange("cancel");
+      onStatusChange({ type: "cancel" });
     },
 
     onError: (data: OnErrorData) => {
@@ -124,7 +135,7 @@ const PaymentButtons = ({
         request: {} as Record<string, unknown>,
         response: { error: data.message } as Record<string, unknown>,
       });
-      onStatusChange("error");
+      onStatusChange({ type: "error" });
     },
 
     onComplete: (data: OnCompleteData) => {
@@ -189,6 +200,7 @@ const PaymentButtons = ({
           cart={cart}
           onStatusChange={onStatusChange}
           addLog={addLog}
+          shippingCost={shippingCost}
         />
       </PayPalCardFieldsProvider>
     </div>
@@ -199,10 +211,12 @@ const AdvancedCardForm = ({
   cart,
   onStatusChange,
   addLog,
+  shippingCost,
 }: {
   cart: CartItem;
   onStatusChange: (status: PaymentStatus) => void;
   addLog: (log: Omit<ApiLog, "timestamp">) => void;
+  shippingCost?: number;
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { submit: submitPayment, submitResponse } =
@@ -228,12 +242,15 @@ const AdvancedCardForm = ({
           request: { orderId: submitResponse.data.orderId },
           response: enriched,
         });
+        const itemSub = parseFloat(PRODUCT.price) * cart.quantity;
+        const shCost = shippingCost ?? 10;
+        const taxVal = parseFloat((itemSub * 0.05).toFixed(2));
         console.log("Card capture result:", result);
         clearCart();
-        onStatusChange("success");
+        onStatusChange({ type: "success", data: { ...result, _subtotal: itemSub, _shipping: shCost, _tax: taxVal } });
       } catch (err) {
         console.error("Card capture error:", err);
-        onStatusChange("error");
+        onStatusChange({ type: "error" });
       }
     })();
   }, [submitResponse]);
@@ -243,13 +260,19 @@ const AdvancedCardForm = ({
     if (isProcessing) return;
     setIsProcessing(true);
     try {
+      const itemSub = parseFloat(PRODUCT.price) * cart.quantity;
+      const shipping = shippingCost ?? 10;
+      const tax = parseFloat((itemSub * 0.05).toFixed(2));
+
       const orderId = await createOrder({
         cart: [{ sku: cart.sku, quantity: cart.quantity }],
+        shippingCost: shipping,
+        tax,
       }).then((r: any) => r.orderId ?? r);
       await submitPayment(orderId);
     } catch (err) {
       console.error("Card submit error:", err);
-      onStatusChange("error");
+      onStatusChange({ type: "error" });
       setIsProcessing(false);
     }
   };
@@ -297,7 +320,7 @@ const AdvancedCardForm = ({
 const Checkout = () => {
   const [cart, setCart] = useState<CartItem | null>(null);
   const [clientId, setClientId] = useState<string | null>(null);
-  const [status, setStatus] = useState<PaymentStatus>("idle");
+  const [status, setStatus] = useState<PaymentStatus>({ type: "idle" });
   const [apiLogs, setApiLogs] = useState<ApiLog[]>([]);
   const router = useRouter();
 
@@ -331,7 +354,8 @@ const Checkout = () => {
   if (!cart || !clientId) return null;
 
   const subtotal = parseFloat(PRODUCT.price) * cart.quantity;
-  const total = subtotal + shippingOption.cost;
+  const tax = parseFloat((subtotal * 0.05).toFixed(2));
+  const total = subtotal + shippingOption.cost + tax;
 
   return (
     <div className="flex">
@@ -342,7 +366,7 @@ const Checkout = () => {
               Checkout
             </h1>
 
-            {status === "idle" ? (
+            {status.type === "idle" ? (
               <>
                 <div className="mb-8">
                   <h2 className="text-sm font-medium tracking-widest uppercase text-[var(--foreground-secondary)] mb-4">
@@ -402,13 +426,23 @@ const Checkout = () => {
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between py-4 border-t border-[var(--border)]">
-                    <span className="text-base font-medium text-[var(--foreground)]">
-                      Total
-                    </span>
-                    <span className="text-base font-medium text-[var(--foreground)]">
-                      ${total.toFixed(2)}
-                    </span>
+                  <div className="text-sm space-y-1 py-4 border-t border-[var(--border)]">
+                    <div className="flex justify-between text-[var(--foreground-secondary)]">
+                      <span>Subtotal</span>
+                      <span>$${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-[var(--foreground-secondary)]">
+                      <span>Shipping ({shippingOption.label})</span>
+                      <span>$${shippingOption.cost.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-[var(--foreground-secondary)]">
+                      <span>Tax (5%)</span>
+                      <span>$${tax.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-base font-bold pt-2 border-t border-[var(--border)]">
+                      <span>Total</span>
+                      <span>$${total.toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -432,21 +466,82 @@ const Checkout = () => {
               </>
             ) : (
               <div className="text-center py-16">
-                {status === "success" && (
-                  <>
-                    <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-[var(--success)]/10 flex items-center justify-center">
-                      <span className="text-3xl">✓</span>
+                {status.type === "success" && (
+                  <div className="border border-green-500/30 bg-green-500/5 rounded-lg p-6 mx-auto max-w-md text-left space-y-3">
+                    <div className="text-center">
+                      <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-[var(--success)]/10 flex items-center justify-center">
+                        <span className="text-3xl">✓</span>
+                      </div>
+                      <h2 className="text-xl font-semibold text-green-500">
+                        Payment Successful
+                      </h2>
+                      <p className="text-sm text-[var(--foreground-secondary)] mt-1">
+                        Total charged: <strong className="text-green-400">${status.data?.purchase_units?.[0]?.amount?.value || status.data?.purchase_units?.[0]?.amount?.value || "—"}</strong>
+                      </p>
                     </div>
-                    <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
-                      Payment Successful
-                    </h2>
-                    <p className="text-base text-[var(--foreground-secondary)] mb-8">
-                      Thank you for your purchase.
-                    </p>
-                  </>
+                    <hr className="border-green-500/20" />
+                    <div className="text-xs space-y-3">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                        <div>
+                          <p className="text-[var(--foreground-secondary)]">Order ID</p>
+                          <p className="font-mono font-medium break-all">{status.data?.id || "—"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[var(--foreground-secondary)]">Status</p>
+                          <p className="text-green-500 font-semibold">{(status.data?.status || "COMPLETED").toUpperCase()}</p>
+                        </div>
+                        <div>
+                          <p className="text-[var(--foreground-secondary)]">Payer</p>
+                          <p className="font-medium">{status.data?.payer?.name?.given_name || status.data?.payer?.name?.givenName || ""} {status.data?.payer?.name?.surname || status.data?.payer?.name?.surname || ""}</p>
+                        </div>
+                        <div>
+                          <p className="text-[var(--foreground-secondary)]">Email</p>
+                          <p className="font-medium text-[10px]">{status.data?.payer?.email_address || status.data?.payer?.emailAddress || "—"}</p>
+                        </div>
+                      </div>
+                      <hr className="border-green-500/20" />
+                      <p className="font-medium text-[var(--foreground-secondary)]">Items</p>
+                      {(status.data?.purchase_units?.[0]?.items || []).map((item: any, idx: number) => {
+                        const prod = getProduct(item.sku);
+                        const unitPrice = item.unit_amount?.value || item.unitAmount?.value || "0";
+                        return (
+                          <div key={idx} className="flex justify-between">
+                            <span>{prod?.emoji || "📦"} {prod?.name || item.name} × {item.quantity}</span>
+                            <span className="font-medium">${(parseFloat(unitPrice) * parseInt(item.quantity)).toFixed(2)}</span>
+                          </div>
+                        );
+                      })}
+                      <hr className="border-green-500/20" />
+                      <div className="flex justify-between text-[var(--foreground-secondary)]">
+                        <span>Subtotal</span>
+                        <span>${(status.data?._subtotal || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-[var(--foreground-secondary)]">
+                        <span>Shipping</span>
+                        <span>${(status.data?._shipping || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-[var(--foreground-secondary)]">
+                        <span>Tax (5%)</span>
+                        <span>${(status.data?._tax || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-bold text-green-500 border-t border-green-500/20 pt-2">
+                        <span>Total</span>
+                        <span>${((status.data?._subtotal || 0) + (status.data?._shipping || 0) + (status.data?._tax || 0)).toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <hr className="border-green-500/20" />
+                    <div className="text-center">
+                      <button
+                        onClick={() => setStatus({ type: "idle" })}
+                        className="text-[var(--accent)] hover:underline text-sm"
+                      >
+                        Continue Shopping →
+                      </button>
+                    </div>
+                  </div>
                 )}
 
-                {status === "cancel" && (
+                {status.type === "cancel" && (
                   <>
                     <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
                       Payment Cancelled
@@ -457,7 +552,7 @@ const Checkout = () => {
                   </>
                 )}
 
-                {status === "error" && (
+                {status.type === "error" && (
                   <>
                     <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
                       Payment Error
