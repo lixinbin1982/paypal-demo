@@ -197,6 +197,7 @@ const Home = () => {
                   "venmo-payments",
                 ]}
                 pageType="checkout"
+                testBuyerCountry="US"
               >
                 <EcsButtons quantity={quantity} addLog={addLog} />
               </PayPalProvider>
