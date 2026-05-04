@@ -163,30 +163,77 @@ const PaymentButtons = ({
     );
   }
 
+  const PAYMENT_OPTIONS = [
+    { id: "paypal", label: "PayPal", emoji: "💳", desc: "Fast & secure" },
+    { id: "venmo", label: "Venmo", emoji: "💸", desc: "Split with friends" },
+    { id: "paylater", label: "Pay Later", emoji: "📅", desc: "Buy now, pay over time" },
+    { id: "guest", label: "Guest Checkout", emoji: "👤", desc: "Pay as guest" },
+  ];
+  const [selectedPayment, setSelectedPayment] = useState("paypal");
+
   return (
-    <div className="flex flex-col gap-3">
-      <PayPalOneTimePaymentButton
-        createOrder={handleCreateOrder}
-        presentationMode="auto"
-        {...handlePaymentCallbacks}
-      />
+    <div className="flex flex-col gap-4">
+      <p className="text-xs font-medium tracking-widest uppercase text-[var(--foreground-secondary)] text-center">
+        Choose a payment method
+      </p>
+      <div className="space-y-2">
+        {PAYMENT_OPTIONS.map((opt) => (
+          <label
+            key={opt.id}
+            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+              selectedPayment === opt.id
+                ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                : "border-[var(--border)]"
+            }`}
+          >
+            <input
+              type="radio"
+              name="payment-method"
+              value={opt.id}
+              checked={selectedPayment === opt.id}
+              onChange={() => setSelectedPayment(opt.id)}
+              className="accent-[var(--accent)]"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{opt.emoji}</span>
+                <p className="text-sm font-medium text-[var(--foreground)]">{opt.label}</p>
+              </div>
+              <p className="text-xs text-[var(--foreground-secondary)] ml-8">{opt.desc}</p>
+            </div>
+          </label>
+        ))}
+      </div>
 
-      <VenmoOneTimePaymentButton
-        createOrder={handleCreateOrder}
-        presentationMode="auto"
-        {...handlePaymentCallbacks}
-      />
-
-      <PayLaterOneTimePaymentButton
-        createOrder={handleCreateOrder}
-        presentationMode="auto"
-        {...handlePaymentCallbacks}
-      />
-
-      <PayPalGuestPaymentButton
-        createOrder={handleCreateOrder}
-        {...handlePaymentCallbacks}
-      />
+      <div className="mt-1">
+        {selectedPayment === "paypal" && (
+          <PayPalOneTimePaymentButton
+            createOrder={handleCreateOrder}
+            presentationMode="auto"
+            {...handlePaymentCallbacks}
+          />
+        )}
+        {selectedPayment === "venmo" && (
+          <VenmoOneTimePaymentButton
+            createOrder={handleCreateOrder}
+            presentationMode="auto"
+            {...handlePaymentCallbacks}
+          />
+        )}
+        {selectedPayment === "paylater" && (
+          <PayLaterOneTimePaymentButton
+            createOrder={handleCreateOrder}
+            presentationMode="auto"
+            {...handlePaymentCallbacks}
+          />
+        )}
+        {selectedPayment === "guest" && (
+          <PayPalGuestPaymentButton
+            createOrder={handleCreateOrder}
+            {...handlePaymentCallbacks}
+          />
+        )}
+      </div>
 
       {/* Advanced Credit & Debit Card */}
       <PayPalCardFieldsProvider
@@ -455,6 +502,7 @@ const Checkout = () => {
                     "card-fields",
                   ]}
                   pageType="checkout"
+                  testBuyerCountry="US"
                 >
                   <PaymentButtons
                     cart={cart}
