@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { captureOrder, patchOrderItems } from "@/actions/paypal";
@@ -23,7 +23,7 @@ const TAX_RATE = 0.05;
 
 const EXTRA_PRODUCTS = PRODUCTS.slice(1);
 
-export default function ConfirmationPage() {
+function Confirmation() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -382,5 +382,13 @@ export default function ConfirmationPage() {
 
       <ApiHistoryPanel logs={logs} />
     </div>
+  );
+}
+
+export default function ConfirmationPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-[var(--foreground-secondary)]">Loading confirmation...</div>}>
+      <Confirmation />
+    </Suspense>
   );
 }
