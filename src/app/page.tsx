@@ -76,11 +76,10 @@ const EcsButtons = ({
   }
 
   return (
-    <div className="flex flex-col items-center gap-2 mt-4">
+    <div className="flex flex-col gap-2 mt-4">
       <p className="text-xs font-medium tracking-widest uppercase text-[var(--foreground-secondary)] text-center">
         Or quick buy
       </p>
-      <div className="w-full max-w-sm">
 
       <PayPalOneTimePaymentButton
         createOrder={handleCreateOrder}
@@ -99,7 +98,6 @@ const EcsButtons = ({
         onApprove={handleApprove}
         presentationMode="auto"
       />
-      </div>
     </div>
   );
 };
@@ -197,7 +195,6 @@ const Home = () => {
                   "venmo-payments",
                 ]}
                 pageType="checkout"
-                testBuyerCountry="US"
               >
                 <EcsButtons quantity={quantity} addLog={addLog} />
               </PayPalProvider>
