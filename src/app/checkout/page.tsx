@@ -311,6 +311,16 @@ const AdvancedCardForm = ({
           {isProcessing ? "Processing..." : "Pay with Card"}
         </button>
       </form>
+
+      {/* Auto-render black credit card button */}
+      <div className="mt-3">
+        <p className="text-xs font-medium tracking-widest uppercase text-[var(--foreground-secondary)] mb-3 text-center">
+          Or use Express Card
+        </p>
+        <paypal-basic-card-button
+          className="w-full [&>button]:!w-full [&>button]:!rounded-lg [&>button]:!h-[44px]"
+        />
+      </div>
     </div>
   );
 };
