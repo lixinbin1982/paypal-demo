@@ -352,7 +352,7 @@ const AdvancedCardForm = ({
         <button
           type="submit"
           disabled={isProcessing}
-          className="w-full px-4 py-2.5 rounded-lg bg-[#003087] text-white text-sm font-medium hover:bg-[#002266] transition-colors cursor-pointer disabled:opacity-50"
+          className="w-full px-4 py-2.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors cursor-pointer disabled:opacity-50"
         >
           {isProcessing ? "Processing..." : "Pay with Card"}
         </button>

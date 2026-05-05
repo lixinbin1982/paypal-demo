@@ -4,9 +4,9 @@ import Footer from "@/components/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PayPal Checkout — Next.js",
+  title: "Luxe — Fashion & Jewelry",
   description:
-    "PayPal one-time payment integration with Next.js and react-paypal-js",
+    "Discover our curated collection of luxury fashion and jewelry. Fast checkout with PayPal.",
 };
 
 export default function RootLayout({
