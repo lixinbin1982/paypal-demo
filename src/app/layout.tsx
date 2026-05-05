@@ -4,9 +4,9 @@ import Footer from "@/components/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Luxe — Fashion & Jewelry",
+  title: "Ben's Demo Store",
   description:
-    "Discover our curated collection of luxury fashion and jewelry. Fast checkout with PayPal.",
+    "Ben's Demo Store — Fashion & Jewelry. Fast checkout with PayPal.",
 };
 
 export default function RootLayout({

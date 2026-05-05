@@ -12,7 +12,7 @@ import {
   INSTANCE_LOADING_STATE,
   type OnApproveDataOneTimePayments,
 } from "@paypal/react-paypal-js/sdk-v6";
-import { PRODUCTS, saveCart, type ProductInfo } from "@/lib/product";
+import { PRODUCTS, saveCart, type ProductInfo, type CartInput } from "@/lib/product";
 import {
   getBrowserSafeClientId,
   createOrder,
@@ -25,10 +25,14 @@ const QUANTITY_OPTIONS = [1, 2, 3, 4, 5];
 const EcsButtons = ({
   product,
   quantity,
+  selectedSize,
+  selectedColor,
   addLog,
 }: {
   product: ProductInfo;
   quantity: number;
+  selectedSize?: string;
+  selectedColor?: string;
   addLog: (log: Omit<ApiLog, "timestamp">) => void;
 }) => {
   const { loadingStatus } = usePayPal();
@@ -43,7 +47,13 @@ const EcsButtons = ({
 
   const handleCreateOrder = async () => {
     const { orderId } = await createOrder({
-      cart: [{ sku: product.sku, quantity }],
+      cart: [{
+        sku: product.sku,
+        quantity,
+        size: selectedSize,
+        color: selectedColor,
+        colorLabel: product.colors?.find(c => c.value === selectedColor)?.label,
+      }],
     });
     addLog({
       type: "createOrder",
@@ -104,14 +114,74 @@ const EcsButtons = ({
   );
 };
 
+type VariantSelectorProps = {
+  label: string;
+  options: { label: string; value: string }[];
+  selected: string;
+  onChange: (val: string) => void;
+  type?: "size" | "color";
+};
+
+const VariantSelector = ({ label, options, selected, onChange, type = "size" }: VariantSelectorProps) => {
+  if (type === "color") {
+    return (
+      <div className="mb-3">
+        <p className="text-[10px] font-medium tracking-wide uppercase text-[var(--foreground-secondary)] mb-2">
+          {label}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => onChange(opt.value)}
+              className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer ${
+                selected === opt.value
+                  ? "border-[var(--accent)] scale-110 shadow-sm"
+                  : "border-[var(--border)] hover:border-[var(--foreground-secondary)]"
+              }`}
+              style={{ backgroundColor: opt.value }}
+              title={opt.label}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-3">
+      <p className="text-[10px] font-medium tracking-wide uppercase text-[var(--foreground-secondary)] mb-1.5">
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={`px-3 py-1 text-xs rounded-md border transition-all cursor-pointer ${
+              selected === opt.value
+                ? "border-[var(--accent)] bg-[var(--accent)]/5 text-[var(--accent)] font-medium"
+                : "border-[var(--border)] text-[var(--foreground-secondary)] hover:border-[var(--foreground-secondary)]"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const ProductCard = ({
   product,
   onAddToBag,
 }: {
   product: ProductInfo;
-  onAddToBag: (product: ProductInfo, quantity: number) => void;
+  onAddToBag: (product: ProductInfo, opts: { quantity: number; size?: string; color?: string }) => void;
 }) => {
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState(product.sizes?.[0]?.value || "");
+  const [selectedColor, setSelectedColor] = useState(product.colors?.[0]?.value || "");
   const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
@@ -134,28 +204,50 @@ const ProductCard = ({
 
       {/* Product Info */}
       <div className="p-5 flex flex-col flex-1">
-        <div className="flex-1">
-          <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-[var(--accent)] mb-1.5">
+        <div className="flex-1 space-y-1">
+          <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-[var(--accent)]">
             New Arrival
           </p>
-          <h3 className="text-lg font-semibold text-[var(--foreground)] mb-1">
+          <h3 className="text-lg font-semibold text-[var(--foreground)]">
             {product.name}
           </h3>
-          <p className="text-sm text-[var(--foreground-secondary)] mb-2 line-clamp-2">
+          <p className="text-sm text-[var(--foreground-secondary)] line-clamp-2">
             {product.tagline}
           </p>
-          <p className="text-xs text-[var(--foreground-secondary)]/70 mb-4 line-clamp-3">
+          <p className="text-xs text-[var(--foreground-secondary)]/70 line-clamp-3 mb-3">
             {product.description}
           </p>
         </div>
 
-        <p className="text-xl font-medium text-[var(--foreground)] mb-4">
+        <p className="text-xl font-medium text-[var(--foreground)] mb-3">
           ${product.price}
         </p>
 
+        {/* Size Selector */}
+        {product.sizes && (
+          <VariantSelector
+            label="Size"
+            options={product.sizes}
+            selected={selectedSize}
+            onChange={setSelectedSize}
+            type="size"
+          />
+        )}
+
+        {/* Color Selector */}
+        {product.colors && (
+          <VariantSelector
+            label="Color"
+            options={product.colors}
+            selected={selectedColor}
+            onChange={setSelectedColor}
+            type="color"
+          />
+        )}
+
         {/* Quantity */}
-        <div className="flex items-center justify-between mb-4">
-          <label className="text-xs text-[var(--foreground-secondary)]">Quantity</label>
+        <div className="flex items-center justify-between mb-3">
+          <label className="text-xs text-[var(--foreground-secondary)]">Qty</label>
           <select
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
@@ -169,7 +261,7 @@ const ProductCard = ({
 
         {/* Add to Bag */}
         <button
-          onClick={() => onAddToBag(product, quantity)}
+          onClick={() => onAddToBag(product, { quantity, size: selectedSize || undefined, color: selectedColor || undefined })}
           className="w-full py-2.5 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors cursor-pointer"
         >
           Add to Bag
@@ -182,8 +274,10 @@ const ProductCard = ({
 const Home = () => {
   const [clientId, setClientId] = useState<string | null>(null);
   const [apiLogs, setApiLogs] = useState<ApiLog[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<ProductInfo | null>(null);
+  const [heroSize, setHeroSize] = useState(PRODUCTS[0].sizes?.[0]?.value || "");
+  const [heroColor, setHeroColor] = useState(PRODUCTS[0].colors?.[0]?.value || "");
   const [heroIndex, setHeroIndex] = useState(0);
+  const [showHistory, setShowHistory] = useState(false);
   const router = useRouter();
 
   const addLog = useCallback(
@@ -200,13 +294,26 @@ const Home = () => {
     getBrowserSafeClientId().then(setClientId);
   }, []);
 
-  const handleAddToBag = (product: ProductInfo, quantity: number) => {
-    saveCart({ sku: product.sku, quantity });
+  const handleAddToBag = (product: ProductInfo, opts: { quantity: number; size?: string; color?: string }) => {
+    const cartItem: CartInput = {
+      sku: product.sku,
+      quantity: opts.quantity,
+      size: opts.size,
+      color: opts.color,
+    };
+    saveCart(cartItem);
     router.push("/checkout");
   };
 
   const heroProduct = PRODUCTS[heroIndex];
-  const otherProducts = PRODUCTS.filter((_, i) => i !== heroIndex);
+
+  // Sync hero variants when hero product changes
+  useEffect(() => {
+    setHeroSize(heroProduct.sizes?.[0]?.value || "");
+    setHeroColor(heroProduct.colors?.[0]?.value || "");
+  }, [heroIndex]);
+  // Collection: show up to 3 products (excluding hero)
+  const otherProducts = PRODUCTS.filter((_, i) => i !== heroIndex).slice(0, 3);
 
   return (
     <div className="flex">
@@ -214,9 +321,9 @@ const Home = () => {
         {/* Hero Section — featured product */}
         <section className="px-6 pt-16 pb-12 md:pt-24 md:pb-16">
           <div className="max-w-6xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-10 items-center">
+            <div className="grid md:grid-cols-2 gap-10 items-start">
               {/* Hero Visual */}
-              <div className="aspect-square rounded-3xl bg-[var(--background-secondary)] relative overflow-hidden order-2 md:order-1">
+              <div className="aspect-square rounded-3xl bg-[var(--background-secondary)] relative overflow-hidden order-2 md:order-1 sticky top-8">
                 <img
                   src={heroProduct.image}
                   alt={heroProduct.name}
@@ -241,14 +348,62 @@ const Home = () => {
                 <p className="text-3xl font-medium text-[var(--foreground)] mb-6">
                   ${heroProduct.price}
                 </p>
+
+                {/* Hero Variant Selectors */}
+                {heroProduct.sizes && (
+                  <div className="mb-4">
+                    <p className="text-xs font-medium tracking-wide uppercase text-[var(--foreground-secondary)] mb-2">
+                      Size
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {heroProduct.sizes.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setHeroSize(opt.value)}
+                          className={`px-4 py-1.5 text-sm rounded-md border transition-all cursor-pointer ${
+                            heroSize === opt.value
+                              ? "border-[var(--accent)] bg-[var(--accent)]/5 text-[var(--accent)] font-medium"
+                              : "border-[var(--border)] text-[var(--foreground-secondary)] hover:border-[var(--foreground-secondary)]"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {heroProduct.colors && (
+                  <div className="mb-6">
+                    <p className="text-xs font-medium tracking-wide uppercase text-[var(--foreground-secondary)] mb-2">
+                      Color
+                    </p>
+                    <div className="flex flex-wrap gap-2.5">
+                      {heroProduct.colors.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setHeroColor(opt.value)}
+                          className={`w-8 h-8 rounded-full border-2 transition-all cursor-pointer ${
+                            heroColor === opt.value
+                              ? "border-[var(--accent)] scale-110 shadow-sm"
+                              : "border-[var(--border)] hover:border-[var(--foreground-secondary)]"
+                          }`}
+                          style={{ backgroundColor: opt.value }}
+                          title={opt.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <button
-                  onClick={() => handleAddToBag(heroProduct, 1)}
+                  onClick={() => handleAddToBag(heroProduct, { quantity: 1, size: heroSize || undefined, color: heroColor || undefined })}
                   className="inline-block px-10 py-3.5 rounded-full bg-[var(--accent)] text-white text-base font-medium hover:bg-[var(--accent-hover)] transition-colors cursor-pointer"
                 >
                   Shop Now
                 </button>
 
-                {/* ECS Quick Buy — hero only */}
+                {/* ECS Quick Buy — inside info column */}
                 {clientId && (
                   <div className="mt-6">
                     <PayPalProvider
@@ -257,7 +412,7 @@ const Home = () => {
                       pageType="checkout"
                       testBuyerCountry="US"
                     >
-                      <EcsButtons product={heroProduct} quantity={1} addLog={addLog} />
+                      <EcsButtons product={heroProduct} quantity={1} selectedSize={heroSize} selectedColor={heroColor} addLog={addLog} />
                     </PayPalProvider>
                   </div>
                 )}
@@ -294,7 +449,13 @@ const Home = () => {
           </div>
         </section>
       </main>
-      <ApiHistoryPanel logs={apiLogs} />
+      <ApiHistoryPanel logs={apiLogs} show={showHistory} />
+      <button
+        onClick={() => setShowHistory(!showHistory)}
+        className="fixed bottom-6 right-6 z-50 px-4 py-2 text-xs font-semibold bg-[var(--accent)] text-white rounded-lg shadow-lg hover:opacity-90 cursor-pointer"
+      >
+        {showHistory ? "✕ Close API Log" : "📋 API Log"}
+      </button>
     </div>
   );
 };

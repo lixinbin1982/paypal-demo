@@ -5,7 +5,6 @@ import {
   ItemCategory,
   OrdersController,
   PatchOp,
-  StoreInVaultInstruction,
 } from "@paypal/paypal-server-sdk";
 import { randomUUID } from "node:crypto";
 import { paypalClient } from "@/lib/paypalClient";
@@ -73,13 +72,11 @@ export const createOrder = async ({
   shippingCost,
   tax,
   shippingAddress,
-  savePaymentMethod,
 }: {
   cart: CartItem[];
   shippingCost?: number;
   tax?: number;
   shippingAddress?: ShippingAddress;
-  savePaymentMethod?: boolean;
 }) => {
   const { items, itemSubtotal } = buildItemsArray(cart);
 
@@ -130,24 +127,6 @@ export const createOrder = async ({
     purchaseUnits: [purchaseUnit as any],
   } as any;
 
-  // Vault payment method if user opted in
-  if (savePaymentMethod) {
-    orderRequestBody.paymentSource = {
-      paypal: {
-        attributes: {
-          vault: {
-            storeInVault: "ON_SUCCESS" as const,
-            usageType: "MERCHANT" as const,
-          },
-        },
-        experienceContext: {
-          returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL || ""}/checkout`,
-          cancelUrl: `${process.env.NEXT_PUBLIC_BASE_URL || ""}/cart`,
-        },
-      },
-    };
-  }
-
   // Add payer email if provided
   if (shippingAddress?.email) {
     orderRequestBody.payer = {
@@ -164,7 +143,7 @@ export const createOrder = async ({
       paypalRequestId: randomUUID(),
     });
 
-    if (statusCode < 200 || statusCode >= 300) {
+    if (statusCode !== 201) {
       throw new Error(`Failed to create order: ${statusCode}`);
     }
 
@@ -175,21 +154,7 @@ export const createOrder = async ({
     console.log("RESPONSE:", JSON.stringify(result, null, 2));
     console.log("================================\n");
 
-    // Return request body + response for API History logging
-    return { 
-      orderId: result.id,
-      requestBody: JSON.parse(JSON.stringify(orderRequestBody)),
-      responseBody: {
-        id: result.id,
-        status: result.status,
-        intent: result.intent,
-        paymentSource: result.paymentSource,
-        purchaseUnits: result.purchaseUnits,
-        links: result.links,
-        payer: result.payer,
-        createTime: result.createTime,
-      },
-    };
+    return { orderId: result.id };
   } catch (error) {
     console.error("Error creating PayPal order:", error);
     throw error;

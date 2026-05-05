@@ -21,9 +21,12 @@ const SHIPPING_OPTIONS: ShippingOption[] = [
 
 const TAX_RATE = 0.05;
 
-const EXTRA_PRODUCTS = PRODUCTS.filter((_, i) => i !== 0).slice(0, 3);
+// Products to recommend — exclude the one the customer already bought
+const getRecommendedProducts = (purchasedSku?: string) =>
+  PRODUCTS.filter(p => p.sku !== purchasedSku).slice(0, 3);
 
 function Confirmation() {
+  const [showHistory, setShowHistory] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -33,9 +36,13 @@ function Confirmation() {
   const [errorMsg, setErrorMsg] = useState("");
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption>(SHIPPING_OPTIONS[0]);
-  const [extras, setExtras] = useState<Record<string, number>>(
-    Object.fromEntries(EXTRA_PRODUCTS.map((p) => [p.sku, 0]))
-  );
+  const recommendedProducts = getRecommendedProducts(order?.purchase_units?.[0]?.items?.[0]?.sku);
+  const [extras, setExtras] = useState<Record<string, number>>({});
+
+  // Sync extras when recommendedProducts changes
+  useEffect(() => {
+    setExtras(Object.fromEntries(recommendedProducts.map((p) => [p.sku, 0])));
+  }, [order]);
 
   const addLog = (log: Omit<ApiLog, "timestamp">) => {
     setLogs((prev) => [...prev, { ...log, timestamp: new Date().toLocaleTimeString() }]);
@@ -77,7 +84,7 @@ function Confirmation() {
   };
 
   const itemTotal = parseFloat(order?.purchase_units?.[0]?.amount?.breakdown?.item_total?.value || "75");
-  const extrasTotal = EXTRA_PRODUCTS.reduce((sum, p) => sum + parseFloat(p.price) * (extras[p.sku] || 0), 0);
+  const extrasTotal = recommendedProducts.reduce((sum, p) => sum + parseFloat(p.price) * (extras[p.sku] || 0), 0);
   const combinedSubtotal = itemTotal + extrasTotal;
   const shippingCost = selectedShipping.cost;
   const tax = parseFloat((combinedSubtotal * TAX_RATE).toFixed(2));
@@ -189,32 +196,34 @@ function Confirmation() {
 
             {/* Extra Products — add/remove inline */}
             <div>
-              <p className="text-[var(--foreground-secondary)] text-xs font-medium mb-2">ADD MORE</p>
-              <div className="space-y-2">
-                {EXTRA_PRODUCTS.map((p) => {
+              <p className="text-[var(--foreground-secondary)] text-xs font-medium mb-3">You May Also Like</p>
+              <div className="grid grid-cols-3 gap-3">
+                {recommendedProducts.map((p) => {
                   const qty = extras[p.sku] || 0;
                   return (
-                    <div key={p.sku} className="flex items-center justify-between p-2.5 rounded-lg border border-[var(--border)]">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-10 h-10 rounded-lg bg-[var(--background-secondary)] overflow-hidden shrink-0">
-                          <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{p.name}</p>
-                          <p className="text-[10px] text-[var(--foreground-secondary)] truncate">{p.description}</p>
-                        </div>
+                    <div key={p.sku} className="flex flex-col rounded-xl border border-[var(--border)] overflow-hidden">
+                      <div className="aspect-[3/4] bg-[var(--background-secondary)] overflow-hidden">
+                        <img
+                          src={p.image}
+                          alt={p.name}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                        />
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs text-[var(--foreground-secondary)] w-10 text-right">${p.price}</span>
-                        <button
-                          onClick={() => setExtras(prev => ({ ...prev, [p.sku]: Math.max(0, (prev[p.sku] || 0) - 1) }))}
-                          className="w-6 h-6 rounded border border-[var(--border)] flex items-center justify-center text-xs hover:bg-[var(--accent)] hover:text-white transition-colors cursor-pointer"
-                        >−</button>
-                        <span className="w-5 text-center text-sm font-medium">{qty}</span>
-                        <button
-                          onClick={() => setExtras(prev => ({ ...prev, [p.sku]: (prev[p.sku] || 0) + 1 }))}
-                          className="w-6 h-6 rounded border border-[var(--border)] flex items-center justify-center text-xs hover:bg-[var(--accent)] hover:text-white transition-colors cursor-pointer"
-                        >+</button>
+                      <div className="p-2.5 space-y-1.5">
+                        <p className="text-xs font-medium text-[var(--foreground)] truncate">{p.name}</p>
+                        <p className="text-[11px] text-[var(--foreground-secondary)] truncate leading-tight">{p.description}</p>
+                        <p className="text-xs font-semibold text-[var(--accent)]">${p.price}</p>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setExtras(prev => ({ ...prev, [p.sku]: Math.max(0, (prev[p.sku] || 0) - 1) }))}
+                            className="w-6 h-6 rounded border border-[var(--border)] flex items-center justify-center text-xs hover:bg-[var(--accent)] hover:text-white transition-colors cursor-pointer shrink-0"
+                          >−</button>
+                          <span className="flex-1 text-center text-xs font-medium">{qty}</span>
+                          <button
+                            onClick={() => setExtras(prev => ({ ...prev, [p.sku]: (prev[p.sku] || 0) + 1 }))}
+                            className="w-6 h-6 rounded border border-[var(--border)] flex items-center justify-center text-xs hover:bg-[var(--accent)] hover:text-white transition-colors cursor-pointer shrink-0"
+                          >+</button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -298,9 +307,9 @@ function Confirmation() {
                 );
               })}
               {/* Added extras */}
-              {EXTRA_PRODUCTS.filter(p => (extras[p.sku] || 0) > 0).map(p => (
+              {recommendedProducts.filter(p => (extras[p.sku] || 0) > 0).map(p => (
                 <div key={p.sku} className="flex justify-between text-[var(--accent)] text-xs">
-                  <span>{p.emoji} {p.name} × {extras[p.sku]}</span>
+                  <span>{p.name} × {extras[p.sku]}</span>
                   <span>${(parseFloat(p.price) * extras[p.sku]).toFixed(2)}</span>
                 </div>
               ))}
@@ -373,7 +382,7 @@ function Confirmation() {
                   </div>
                 );
               })}
-              {EXTRA_PRODUCTS.filter(p => (extras[p.sku] || 0) > 0).map(p => (
+              {recommendedProducts.filter(p => (extras[p.sku] || 0) > 0).map(p => (
                 <div key={p.sku} className="flex justify-between text-green-400 items-center">
                   <div className="flex items-center gap-1.5">
                     <div className="w-5 h-5 rounded bg-[var(--background-secondary)] overflow-hidden shrink-0">
@@ -397,7 +406,13 @@ function Confirmation() {
         )}
       </div>
 
-      <ApiHistoryPanel logs={logs} />
+      <ApiHistoryPanel logs={logs} show={showHistory} />
+      <button
+        onClick={() => setShowHistory(!showHistory)}
+        className="fixed bottom-6 right-6 z-50 px-4 py-2 text-xs font-semibold bg-[var(--accent)] text-white rounded-lg shadow-lg hover:opacity-90 cursor-pointer"
+      >
+        {showHistory ? "✕ Close API Log" : "📋 API Log"}
+      </button>
     </div>
   );
 }

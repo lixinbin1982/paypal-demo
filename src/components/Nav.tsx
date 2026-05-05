@@ -7,7 +7,7 @@ const Nav = () => {
         href="/"
         className="text-sm font-semibold tracking-tight text-[var(--foreground)] hover:text-[var(--accent)] transition-colors"
       >
-        <span className="text-[var(--accent)]">✦</span> Luxe
+Ben's Demo Store
       </Link>
       <div className="flex items-center gap-4">
         <Link

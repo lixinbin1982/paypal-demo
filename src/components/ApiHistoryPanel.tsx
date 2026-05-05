@@ -12,9 +12,6 @@ export type ApiLog = {
   timestamp: string;
 };
 
-/**
- * Convert the API logs into a Postman Collection v2.1 JSON
- */
 function buildPostmanCollection(logs: ApiLog[]) {
   const items = logs.map((log, i) => {
     const cleanUrl = log.url
@@ -129,7 +126,7 @@ function buildPostmanCollection(logs: ApiLog[]) {
   };
 }
 
-export default function ApiHistoryPanel({ logs }: { logs: ApiLog[] }) {
+export default function ApiHistoryPanel({ logs, show = false }: { logs: ApiLog[]; show?: boolean }) {
   const exportRef = useRef<HTMLAnchorElement>(null);
 
   const handleExport = useCallback(() => {
@@ -144,6 +141,8 @@ export default function ApiHistoryPanel({ logs }: { logs: ApiLog[] }) {
     a.click();
     URL.revokeObjectURL(url);
   }, [logs]);
+
+  if (!show) return null;
 
   return (
     <div className="w-[480px] shrink-0 border-l border-[var(--border)] bg-[#0d1117] text-[#c9d1d9] flex flex-col h-screen sticky top-0 overflow-hidden">

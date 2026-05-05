@@ -52,8 +52,6 @@ const PaymentButtons = ({
     { id: "guest", label: "Guest Checkout", emoji: "👤", desc: "Pay as guest" },
   ];
   const [selectedPayment, setSelectedPayment] = useState("paypal");
-  const [contactAddr, setContactAddr] = useState<any>({ email: "customer@example.com", fullName: "John Doe", addressLine1: "123 Main St", adminArea2: "New York", adminArea1: "NY", postalCode: "10001" });
-  const [savePaymentMethod, setSavePaymentMethod] = useState(false);
   const [shippingAddress, setShippingAddress] = useState<Record<string, string> | null>(null);
   const { loadingStatus } = usePayPal();
   const { error: eligibilityError } = useEligibleMethods({
@@ -76,25 +74,15 @@ const PaymentButtons = ({
       cart: [{ sku: cart.sku, quantity: cart.quantity }],
       shippingCost: shipping,
       tax,
-      shippingAddress: {
-        email: contactAddr?.email || "",
-        fullName: contactAddr?.fullName || "",
-        addressLine1: contactAddr?.addressLine1 || "",
-        adminArea2: contactAddr?.adminArea2 || "",
-        adminArea1: contactAddr?.adminArea1 || "",
-        postalCode: contactAddr?.postalCode || "",
-        countryCode: "US",
-      },
-      savePaymentMethod,
     });
     setShippingAddress(null);
     addLog({
       type: "createOrder",
       method: "POST",
-      url: "/v2/checkout/orders",
+      url: "/api/paypal/orders",
       status: 201,
-      request: (result as any).requestBody || { sku: cart.sku, quantity: cart.quantity, shippingCost: shipping, tax },
-      response: (result as any).responseBody || (result as unknown as Record<string, unknown>),
+      request: { sku: cart.sku, quantity: cart.quantity, shippingCost: shipping, tax },
+      response: result as unknown as Record<string, unknown>,
     });
     return result;
   };
@@ -126,7 +114,7 @@ const PaymentButtons = ({
       addLog({
         type: "captureOrder",
         method: "POST",
-        url: "/v2/checkout/orders/{order_id}/capture",
+        url: "/api/paypal/orders/capture",
         status: 200,
         request: { orderId: data.orderId },
         response: captureResult as unknown as Record<string, unknown>,
@@ -246,21 +234,6 @@ const PaymentButtons = ({
         )}
       </div>
 
-      {/* Save payment method checkbox */}
-      {selectedPayment === "paypal" && (
-        <label className="flex items-center gap-2 py-2 cursor-pointer group">
-          <input
-            type="checkbox"
-            checked={savePaymentMethod}
-            onChange={(e) => setSavePaymentMethod(e.target.checked)}
-            className="accent-[var(--accent)] w-4 h-4"
-          />
-          <span className="text-xs text-[var(--foreground-secondary)] group-hover:text-[var(--foreground)] transition-colors">
-            Save my PayPal account
-          </span>
-        </label>
-      )}
-
       {/* Advanced Credit & Debit Card */}
       <PayPalCardFieldsProvider
         amount={{
@@ -276,7 +249,6 @@ const PaymentButtons = ({
           shippingCost={shippingCost}
         />
       </PayPalCardFieldsProvider>
-
     </div>
   );
 };
@@ -425,6 +397,7 @@ const Checkout = () => {
 
   const SHIPPING_OPTIONS: { id: string; label: string; desc: string; cost: number }[] = [
     { id: "us", label: "US Shipping", desc: "5-8 business days", cost: 10 },
+    { id: "ca", label: "Canada Shipping", desc: "5-8 business days", cost: 20 },
     { id: "intl", label: "International", desc: "7-14 business days", cost: 14.99 },
   ];
   const [shippingOption, setShippingOption] = useState(SHIPPING_OPTIONS[0]);
@@ -482,70 +455,6 @@ const Checkout = () => {
                     <p className="text-sm font-medium text-[var(--foreground)]">
                       ${subtotal.toFixed(2)}
                     </p>
-                  </div>
-
-                  {/* Contact & Address */}
-                  <div className="py-4 border-t border-[var(--border)] space-y-4">
-                    <div>
-                      <p className="text-sm font-medium tracking-widest uppercase text-[var(--foreground-secondary)] mb-2">
-                        Contact
-                      </p>
-                      <input
-                        type="email"
-                        defaultValue="customer@example.com"
-                        onChange={(e) => setContactAddr(prev => ({ ...prev, email: e.target.value }))}
-                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
-                        placeholder="email@example.com"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium tracking-widest uppercase text-[var(--foreground-secondary)] mb-2">
-                        Shipping Address
-                      </p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          defaultValue="John Doe"
-                          onChange={(e) => setContactAddr(prev => ({ ...prev, fullName: e.target.value }))}
-                          className="col-span-2 px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
-                          placeholder="Full Name"
-                        />
-                        <input
-                          type="text"
-                          defaultValue="123 Main St"
-                          onChange={(e) => setContactAddr(prev => ({ ...prev, addressLine1: e.target.value }))}
-                          className="col-span-2 px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
-                          placeholder="Address Line 1"
-                        />
-                        <input
-                          type="text"
-                          defaultValue="New York"
-                          onChange={(e) => setContactAddr(prev => ({ ...prev, adminArea2: e.target.value }))}
-                          className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
-                          placeholder="City"
-                        />
-                        <input
-                          type="text"
-                          defaultValue="NY"
-                          onChange={(e) => setContactAddr(prev => ({ ...prev, adminArea1: e.target.value }))}
-                          className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
-                          placeholder="State"
-                        />
-                        <input
-                          type="text"
-                          defaultValue="10001"
-                          onChange={(e) => setContactAddr(prev => ({ ...prev, postalCode: e.target.value }))}
-                          className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
-                          placeholder="ZIP Code"
-                        />
-                        <input
-                          type="text"
-                          value="US"
-                          readOnly
-                          className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground-secondary)]"
-                        />
-                      </div>
-                    </div>
                   </div>
 
                   {/* Shipping Selection */}
