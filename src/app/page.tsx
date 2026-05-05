@@ -112,12 +112,24 @@ const ProductCard = ({
   onAddToBag: (product: ProductInfo, quantity: number) => void;
 }) => {
   const [quantity, setQuantity] = useState(1);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
-    <div className="bg-[var(--background)] rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col">
+    <div className="bg-[var(--background)] rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col group">
       {/* Product Image */}
-      <div className="aspect-[4/5] bg-[var(--background-secondary)] flex items-center justify-center overflow-hidden">
-        <span className="text-7xl">{product.emoji}</span>
+      <div className="aspect-[4/5] bg-[var(--background-secondary)] relative overflow-hidden">
+        {!imgLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-[var(--border)] border-t-[var(--accent)] rounded-full animate-spin" />
+          </div>
+        )}
+        <img
+          src={product.image}
+          alt={product.name}
+          onLoad={() => setImgLoaded(true)}
+          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+          loading="lazy"
+        />
       </div>
 
       {/* Product Info */}
@@ -204,8 +216,12 @@ const Home = () => {
           <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-2 gap-10 items-center">
               {/* Hero Visual */}
-              <div className="aspect-square rounded-3xl bg-[var(--background-secondary)] flex items-center justify-center order-2 md:order-1">
-                <span className="text-[8rem] md:text-[10rem]">{heroProduct.emoji}</span>
+              <div className="aspect-square rounded-3xl bg-[var(--background-secondary)] relative overflow-hidden order-2 md:order-1">
+                <img
+                  src={heroProduct.image}
+                  alt={heroProduct.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               {/* Hero Info */}

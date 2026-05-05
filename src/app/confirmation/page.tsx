@@ -196,7 +196,9 @@ function Confirmation() {
                   return (
                     <div key={p.sku} className="flex items-center justify-between p-2.5 rounded-lg border border-[var(--border)]">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="text-lg shrink-0">{p.emoji}</span>
+                        <div className="w-10 h-10 rounded-lg bg-[var(--background-secondary)] overflow-hidden shrink-0">
+                          <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                        </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">{p.name}</p>
                           <p className="text-[10px] text-[var(--foreground-secondary)] truncate">{p.description}</p>
@@ -284,8 +286,13 @@ function Confirmation() {
                 const unitPrice = item.unit_amount?.value || item.unitAmount?.value || "0";
                 const lineTotal = (parseFloat(unitPrice) * parseInt(item.quantity)).toFixed(2);
                 return (
-                  <div key={idx} className="flex justify-between text-[var(--foreground-secondary)] text-xs">
-                    <span>{prod.emoji} {prod.name} × {item.quantity}</span>
+                  <div key={idx} className="flex justify-between text-[var(--foreground-secondary)] text-xs items-center">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded bg-[var(--background-secondary)] overflow-hidden shrink-0">
+                        <img src={prod.image} alt={prod.name} className="w-full h-full object-cover" />
+                      </div>
+                      <span>{prod.name} × {item.quantity}</span>
+                    </div>
                     <span>${lineTotal}</span>
                   </div>
                 );
@@ -355,15 +362,25 @@ function Confirmation() {
                 const prod = getProduct(item.sku);
                 const unitPrice = item.unit_amount?.value || item.unitAmount?.value || "0";
                 return (
-                  <div key={idx} className="flex justify-between">
-                    <span>{prod.emoji} {prod.name} × {item.quantity}</span>
+                  <div key={idx} className="flex justify-between items-center">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded bg-[var(--background-secondary)] overflow-hidden shrink-0">
+                        <img src={prod.image} alt={prod.name} className="w-full h-full object-cover" />
+                      </div>
+                      <span>{prod.name} × {item.quantity}</span>
+                    </div>
                     <span className="font-medium">${(parseFloat(unitPrice) * parseInt(item.quantity)).toFixed(2)}</span>
                   </div>
                 );
               })}
               {EXTRA_PRODUCTS.filter(p => (extras[p.sku] || 0) > 0).map(p => (
-                <div key={p.sku} className="flex justify-between text-green-400">
-                  <span>{p.emoji} {p.name} × {extras[p.sku]}</span>
+                <div key={p.sku} className="flex justify-between text-green-400 items-center">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded bg-[var(--background-secondary)] overflow-hidden shrink-0">
+                      <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                    </div>
+                    <span>{p.name} × {extras[p.sku]}</span>
+                  </div>
                   <span className="font-medium">${(parseFloat(p.price) * extras[p.sku]).toFixed(2)}</span>
                 </div>
               ))}

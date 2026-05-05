@@ -421,8 +421,12 @@ const Checkout = () => {
                   </h2>
 
                   <div className="flex items-center gap-4 py-4 border-t border-[var(--border)]">
-                    <div className="w-16 h-16 rounded-xl bg-[var(--background-secondary)] flex items-center justify-center shrink-0">
-                      <span className="text-2xl">{product.emoji}</span>
+                    <div className="w-16 h-16 rounded-xl bg-[var(--background-secondary)] overflow-hidden shrink-0">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-[var(--foreground)]">
