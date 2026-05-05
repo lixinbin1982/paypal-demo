@@ -107,13 +107,9 @@ const EcsButtons = ({
 const ProductCard = ({
   product,
   onAddToBag,
-  clientId,
-  addLog,
 }: {
   product: ProductInfo;
   onAddToBag: (product: ProductInfo, quantity: number) => void;
-  clientId: string | null;
-  addLog: (log: Omit<ApiLog, "timestamp">) => void;
 }) => {
   const [quantity, setQuantity] = useState(1);
 
@@ -162,22 +158,10 @@ const ProductCard = ({
         {/* Add to Bag */}
         <button
           onClick={() => onAddToBag(product, quantity)}
-          className="w-full py-2.5 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors cursor-pointer mb-3"
+          className="w-full py-2.5 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors cursor-pointer"
         >
           Add to Bag
         </button>
-
-        {/* ECS Quick Buy */}
-        {clientId && (
-          <PayPalProvider
-            clientId={clientId}
-            components={["paypal-payments", "venmo-payments"]}
-            pageType="checkout"
-            testBuyerCountry="US"
-          >
-            <EcsButtons product={product} quantity={quantity} addLog={addLog} />
-          </PayPalProvider>
-        )}
       </div>
     </div>
   );
@@ -247,6 +231,20 @@ const Home = () => {
                 >
                   Shop Now
                 </button>
+
+                {/* ECS Quick Buy — hero only */}
+                {clientId && (
+                  <div className="mt-6">
+                    <PayPalProvider
+                      clientId={clientId}
+                      components={["paypal-payments", "venmo-payments"]}
+                      pageType="checkout"
+                      testBuyerCountry="US"
+                    >
+                      <EcsButtons product={heroProduct} quantity={1} addLog={addLog} />
+                    </PayPalProvider>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -274,8 +272,6 @@ const Home = () => {
                   key={product.sku}
                   product={product}
                   onAddToBag={handleAddToBag}
-                  clientId={clientId}
-                  addLog={addLog}
                 />
               ))}
             </div>
