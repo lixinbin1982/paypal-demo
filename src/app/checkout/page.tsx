@@ -21,7 +21,7 @@ import {
   type OnCompleteData,
   type OnErrorData,
 } from "@paypal/react-paypal-js/sdk-v6";
-import { PRODUCT, getCart, clearCart, getProduct, type CartItem } from "@/lib/product";
+import { PRODUCT, getCart, clearCart, getProduct, getAllProducts, type CartItem } from "@/lib/product";
 import {
   getBrowserSafeClientId,
   createOrder,
@@ -399,7 +399,8 @@ const Checkout = () => {
 
   if (!cart || !clientId) return null;
 
-  const subtotal = parseFloat(PRODUCT.price) * cart.quantity;
+  const product = getProduct(cart.sku);
+  const subtotal = parseFloat(product.price) * cart.quantity;
   const tax = parseFloat((subtotal * 0.05).toFixed(2));
   const total = subtotal + shippingOption.cost + tax;
 
@@ -421,11 +422,11 @@ const Checkout = () => {
 
                   <div className="flex items-center gap-4 py-4 border-t border-[var(--border)]">
                     <div className="w-16 h-16 rounded-xl bg-[var(--background-secondary)] flex items-center justify-center shrink-0">
-                      <span className="text-2xl">⚽</span>
+                      <span className="text-2xl">{product.emoji}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-[var(--foreground)]">
-                        {PRODUCT.name}
+                        {product.name}
                       </p>
                       <p className="text-sm text-[var(--foreground-secondary)]">
                         Qty: {cart.quantity}

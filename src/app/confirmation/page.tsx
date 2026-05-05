@@ -21,7 +21,7 @@ const SHIPPING_OPTIONS: ShippingOption[] = [
 
 const TAX_RATE = 0.05;
 
-const EXTRA_PRODUCTS = PRODUCTS.slice(1);
+const EXTRA_PRODUCTS = PRODUCTS.filter((_, i) => i !== 0).slice(0, 3);
 
 function Confirmation() {
   const searchParams = useSearchParams();
@@ -85,7 +85,7 @@ function Confirmation() {
 
   const buildFullCart = (): CartItem[] => {
     const originalItem: CartItem = {
-      sku: order?.purchase_units?.[0]?.items?.[0]?.sku || "1blwyeo8",
+      sku: order?.purchase_units?.[0]?.items?.[0]?.sku || PRODUCTS[0].sku,
       quantity: parseInt(order?.purchase_units?.[0]?.items?.[0]?.quantity || "1"),
     };
     const extraItems: CartItem[] = Object.entries(extras).filter(([_, q]) => q > 0).map(([sku, qty]) => ({ sku, quantity: qty }));
